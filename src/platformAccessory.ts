@@ -2,6 +2,8 @@ import { Service, PlatformAccessory, CharacteristicValue, CharacteristicSetCallb
 
 import { ExampleHomebridgePlatform } from './platform';
 
+import * as request from 'request-promise-native';
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -19,6 +21,8 @@ export class ExamplePlatformAccessory {
     Brightness: 100,
   };
 
+  private b36ExporterURL = 'http://10.0.3.2:9301/metrics';
+
   constructor(
     private readonly platform: ExampleHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
@@ -32,8 +36,8 @@ export class ExamplePlatformAccessory {
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Thermostat) || 
-    this.accessory.addService(this.platform.Service.Thermostat);
+    this.service = this.accessory.getService(this.platform.Service.TemperatureSensor) || 
+    this.accessory.addService(this.platform.Service.TemperatureSensor);
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
@@ -123,10 +127,29 @@ export class ExamplePlatformAccessory {
 
     this.platform.log.debug('Get Characteristic On ->', isOn);
 
-    // you must call the callback function
-    // the first argument should be null if there were no errors
-    // the second argument should be the value to return
-    callback(null, 30);
+
+    (async () => {
+      const options = {
+        uri: this.b36ExporterURL,
+      };
+
+      const result = await request.get(options);
+      const lines = result.split('\n');
+      let found = false;
+      for(const line of lines) {
+        if (line.startWith('b36_gauge_temperature')) {
+          const items = line.split(' ');
+          if (items.length === 2) {
+            found = true;
+            callback(null, items[1]);
+          }
+        }
+      }
+
+      if(!found) {
+        callback(new Error('not found'), 0);
+      }
+    })();
   }
 
   /**
