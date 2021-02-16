@@ -137,7 +137,7 @@ export class ExamplePlatformAccessory {
       const lines = result.split('\n');
       let found = false;
       for(const line of lines) {
-        if (line.startWith('b36_gauge_temperature')) {
+        if (line.startsWith('b36_gauge_temperature')) {
           const items = line.split(' ');
           if (items.length === 2) {
             found = true;
